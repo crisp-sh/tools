@@ -1,21 +1,56 @@
-services:
-  filesystem-server:
-    build:
-      context: ./servers/filesystem
-    ports:
-      - 8081:8000
-  memory-server:
-    build:
-      context: ./servers/memory
-    ports:
-      - 8082:8000
-    volumes:
-      - memory:/app/data:rw
-  time-server:
-    build:
-      context: ./servers/time
-    ports:
-      - 8083:8000
+version: "3.8"
+
+networks:
+  proxy:
+    external: true
 
 volumes:
-  memory:
+  memory: {}
+
+services:
+  filesystem-server:
+    image: ghcr.io/crisp-sh/filesystem-server:latest
+    networks:
+      - proxy
+    ports:
+      - "8081:8000"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == ash-2
+      restart_policy:
+        condition: on-failure
+
+  memory-server:
+    image: ghcr.io/crisp-sh/memory-server:latest
+    networks:
+      - proxy
+    ports:
+      - "8082:8000"
+    volumes:
+      - memory:/app/data:rw
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == ash-2
+      restart_policy:
+        condition: on-failure
+
+  time-server:
+    image: ghcr.io/crisp-sh/time-server:latest
+    networks:
+      - proxy
+    ports:
+      - "8083:8000"
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == ash-2
+      restart_policy:
+        condition: on-failure

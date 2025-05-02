@@ -1,0 +1,57 @@
+name: Build and Push Tool Servers
+
+on:
+  push:
+    paths:
+      - 'servers/**'
+      - '.github/workflows/build-tools.yml'
+  workflow_dispatch:
+
+jobs:
+  generate-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Generate list of tool folders
+        id: set-matrix
+        run: |
+          # find each directory under servers and strip the "servers/" prefix
+          dirs=$(find servers -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
+          # convert to JSON array
+          matrix=$(printf '%s\n' $dirs | jq -R . | jq -s .)
+          # export for downstream jobs
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+
+      - name: Debug matrix
+        run: |
+          echo "Discovered folders: ${{ steps.set-matrix.outputs.matrix }}"
+
+  build-tools:
+    needs: generate-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        folder: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & Push ${{ matrix.folder }}
+        uses: docker/build-push-action@v4
+        with:
+          context: servers/${{ matrix.folder }}
+          file: servers/${{ matrix.folder }}/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/crisp-sh/${{ matrix.folder }}-server:latest
