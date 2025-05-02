@@ -19,11 +19,11 @@ jobs:
       - name: Generate list of tool folders
         id: set-matrix
         run: |
-          # find each directory under servers and strip the "servers/" prefix
           dirs=$(find servers -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
-          # convert to JSON array
-          matrix=$(printf '%s\n' $dirs | jq -R . | jq -s .)
-          # export for downstream jobs
+          matrix=$(printf '%s\n' $dirs \
+                   | jq -R . \
+                   | jq -s . \
+                   | jq -c .)
           echo "matrix=$matrix" >> $GITHUB_OUTPUT
 
       - name: Debug matrix
