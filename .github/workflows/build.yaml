@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - 'servers/**'
-      - '.github/workflows/build.yml'
+      - '.github/workflows/build.yaml'
   workflow_dispatch:
 
 jobs:
